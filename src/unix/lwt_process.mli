@@ -173,6 +173,18 @@ val pmap_lines :
   ?stderr : redirection ->
   command -> string Lwt_stream.t -> string Lwt_stream.t
 
+val pmap_lines_raw_input :
+  ?timeout : float ->
+  ?env : string array ->
+  ?stderr : redirection ->
+  command -> string Lwt_stream.t -> string Lwt_stream.t
+
+val pmap_chunks_raw_input :
+  ?timeout : float ->
+  ?env : string array ->
+  ?stderr : redirection ->
+  command -> string Lwt_stream.t -> string Lwt_stream.t
+
 (** {6 Spawning processes} *)
 
 (** State of a sub-process *)

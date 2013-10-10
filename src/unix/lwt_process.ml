@@ -522,3 +522,33 @@ let pmap_lines ?timeout ?env ?stderr cmd lines =
   let pr = open_process ?timeout ?env ?stderr cmd in
   let sender = send Lwt_io.write_lines pr lines in
   monitor sender (recv_lines pr)
+
+let pmap_lines_raw_input ?timeout ?env ?stderr cmd lines =
+  let pr = open_process ?timeout ?env ?stderr cmd in
+  let write oc lines =
+    Lwt_stream.iter_s (Lwt_io.write oc) lines
+  in
+  let sender = send write pr lines in
+  monitor sender (recv_lines pr)
+
+
+let recv_chunks pr =
+  let ic = pr#stdout in
+  Gc.finalise ingore_close ic;
+  Lwt_stream.from
+    (fun _ ->
+       read_opt (Lwt_io.read ~count:8192) ic
+       >>= (function
+             None | Some "" -> Printf.printf "closing the channle\n"; flush stdout ; (Lwt_io.close ic >>= fun _ -> return None)
+           | _ as x -> return x))
+
+
+let pmap_chunks_raw_input ?timeout ?env ?stderr cmd lines =
+  let pr = open_process ?timeout ?env ?stderr cmd in
+  let write oc lines =
+    Lwt_stream.iter_s (function "" -> Printf.printf "dropping line\n"; flush stdout; return ()
+                              | _ as str -> Lwt_io.write oc str >>= fun _ -> Lwt_io.flush oc) lines
+    >>= fun _ -> Printf.printf "WRITE RETURNED\n"; flush stdout ; return ()
+  in
+  let sender = send write pr lines in
+  monitor sender (recv_chunks pr)
